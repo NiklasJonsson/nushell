@@ -17,8 +17,8 @@ pub struct PathSuggestion {
 
 impl PathCompleter {
     pub fn path_suggestions(&self, partial: &str, matcher: &dyn Matcher) -> Vec<PathSuggestion> {
-        dbg!(&partial);
         let (base_dir_name, partial) = {
+            // If partial is only a word we want to search in the current dir
             let (base, rest) = partial.rsplit_once(is_separator).unwrap_or((".", partial));
             // On windows, this standardizes paths to use \
             let mut base = base.replace(is_separator, &SEP.to_string());
@@ -29,12 +29,13 @@ impl PathCompleter {
         };
 
         let base_dir = nu_path::expand_path(Cow::Borrowed(Path::new(&base_dir_name)));
-        dbg!(&base_dir);
-        if !base_dir.is_dir() {
+        // This check is here as base_dir.read_dir() with base_dir == "" will open the current dir
+        // which we don't want in this case (if we did, base_dir would already be ".")
+        if base_dir == Path::new("") {
             return Vec::new();
         }
 
-        let r = if let Ok(result) = base_dir.read_dir() {
+        if let Ok(result) = base_dir.read_dir() {
             result
                 .filter_map(|entry| {
                     entry.ok().and_then(|entry| {
@@ -62,8 +63,7 @@ impl PathCompleter {
                 .collect()
         } else {
             Vec::new()
-        };
-        dbg!(r)
+        }
     }
 }
 
