@@ -8,6 +8,8 @@ const SEP: char = std::path::MAIN_SEPARATOR;
 
 pub struct PathCompleter;
 
+
+#[derive(Debug)]
 pub struct PathSuggestion {
     pub(crate) path: PathBuf,
     pub(crate) suggestion: Suggestion,
@@ -18,7 +20,12 @@ impl PathCompleter {
         let (base_dir_name, partial) = partial.rsplit_once(is_separator).unwrap_or((".", partial));
         // On windows, this standardizes paths to use \
         let base_dir_name = base_dir_name.replace(is_separator, &SEP.to_string());
-        let base_dir = nu_path::expand_path(Cow::Borrowed(Path::new(&base_dir_name)));
+        let base_dir = nu_path::expand_path(Cow::Owned(PathBuf::from(base_dir_name)));
+        if &base_dir == Path::new("") {
+            return Vec::new();
+        }
+
+        let base_dir_name = base_dir.display();
 
         if let Ok(result) = base_dir.read_dir() {
             result
