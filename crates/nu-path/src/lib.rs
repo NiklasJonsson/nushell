@@ -5,7 +5,7 @@ use std::path::{Component, Path, PathBuf};
 // Utility for applying a function that can only be called on the borrowed type of the Cow
 // and also returns a ref. If the Cow is a borrow, we can return the same borrow but an
 // owned value needs extra handling because the returned valued has to be owned as well
-pub fn cow_map_by_ref<'a, B, O, F>(c: Cow<'a, B>, f: F) -> Cow<'a, B>
+pub fn cow_map_by_ref<B, O, F>(c: Cow<'_, B>, f: F) -> Cow<'_, B>
 where
     B: ToOwned<Owned = O> + ?Sized,
     O: AsRef<B>,
@@ -70,7 +70,7 @@ fn handle_dots_push(string: &mut String, count: u8) {
 // Expands any occurence of more than two dots into a sequence of ../ (or ..\ on windows), e.g.
 // ... into ../..
 // .... into ../../../
-fn expand_ndots_string<'a>(path: Cow<'a, str>) -> Cow<'a, str> {
+fn expand_ndots_string(path: Cow<'_, str>) -> Cow<'_, str> {
     use std::path::is_separator;
     // find if we need to expand any >2 dot paths and early exit if not
     let mut dots_count = 0u8;
@@ -124,7 +124,7 @@ fn expand_ndots_string<'a>(path: Cow<'a, str>) -> Cow<'a, str> {
 // Expands any occurence of more than two dots into a sequence of ../ (or ..\ on windows), e.g.
 // ... into ../..
 // .... into ../../../
-fn expand_ndots<'a>(path: Cow<'a, Path>) -> Cow<'a, Path> {
+fn expand_ndots(path: Cow<'_, Path>) -> Cow<'_, Path> {
     cow_map_path_str(path, expand_ndots_string)
 }
 
@@ -208,7 +208,7 @@ where
 }
 
 // Expansion logic lives here to enable testing without depending on dirs-next
-fn expand_tilde_with<'a>(path: Cow<'a, Path>, home: Option<PathBuf>) -> Cow<'a, Path> {
+fn expand_tilde_with(path: Cow<'_, Path>, home: Option<PathBuf>) -> Cow<'_, Path> {
     if !path.starts_with("~") {
         return path;
     }
@@ -230,17 +230,17 @@ fn expand_tilde_with<'a>(path: Cow<'a, Path>, home: Option<PathBuf>) -> Cow<'a, 
     }
 }
 
-pub fn expand_tilde<'a>(path: Cow<'a, Path>) -> Cow<'a, Path> {
+pub fn expand_tilde(path: Cow<'_, Path>) -> Cow<'_, Path> {
     expand_tilde_with(path, dirs_next::home_dir())
 }
 
-pub fn expand_tilde_string<'a>(path: Cow<'a, str>) -> Cow<'a, str> {
+pub fn expand_tilde_string(path: Cow<'_, str>) -> Cow<'_, str> {
     cow_map_str_path(path, expand_tilde)
 }
 
 // Remove "." and ".." in a path. Prefix ".." are not removed as we don't have access to the
 // current dir. This is merely 'string manipulation'. Does not handle "...+", see expand_ndots for that
-pub fn resolve_dots<'a>(path: Cow<'a, Path>) -> Cow<'a, Path> {
+pub fn resolve_dots(path: Cow<'_, Path>) -> Cow<'_, Path> {
     debug_assert!(!path.components().any(|c| std::matches!(c, Component::Normal(os_str) if os_str.to_string_lossy().starts_with("..."))), "Unexpected ndots!");
     if !path
         .components()
@@ -273,13 +273,13 @@ pub fn resolve_dots<'a>(path: Cow<'a, Path>) -> Cow<'a, Path> {
 
 // Expands ~ to home and shortens paths by removing unecessary ".." and "."
 // where possible. Also expands "...+" appropriately.
-pub fn expand_path<'a>(path: Cow<'a, Path>) -> Cow<'a, Path> {
+pub fn expand_path(path: Cow<'_, Path>) -> Cow<'_, Path> {
     let path = expand_tilde(path);
     let path = expand_ndots(path);
     resolve_dots(path)
 }
 
-pub fn expand_path_string<'a>(path: Cow<'a, str>) -> Cow<'a, str> {
+pub fn expand_path_string(path: Cow<'_, str>) -> Cow<'_, str> {
     cow_map_str_path(path, expand_path)
 }
 
